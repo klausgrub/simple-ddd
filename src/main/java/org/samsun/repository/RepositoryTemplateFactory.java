@@ -29,8 +29,6 @@ public class RepositoryTemplateFactory {
     private static ApplicationContext applicationContext;
 
 
-    private static Map<Class, SimpleJpaRepository> repositoryPool = new HashMap<>();
-
     public static RepositoryTemplate getRepositoryTemplate() {
         return repositoryTemplate;
     }
@@ -59,12 +57,6 @@ public class RepositoryTemplateFactory {
         applicationContext = context;
     }
 
-    public static <T, ID> SimpleJpaRepository<T, ID> getRepository(Class<T> domainClass) {
-
-        if(repositoryPool.get(domainClass) == null)
-            repositoryPool.put(domainClass, new SimpleJpaRepository(domainClass, entityManager));
-        return repositoryPool.get(domainClass);
-    }
 
     public static  <T extends JpaRepository> T getJpaRepository(Class<T> jpaRepositoryClass) {
         return applicationContext.getBean(jpaRepositoryClass);

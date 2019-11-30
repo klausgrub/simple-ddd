@@ -9,6 +9,10 @@ import org.springframework.stereotype.Repository;
 
 import javax.persistence.EntityManager;
 import javax.persistence.Query;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
 import javax.transaction.Transactional;
 import java.util.List;
 
@@ -23,12 +27,26 @@ public class RepositoryTemplateJpa implements RepositoryTemplate, org.springfram
 
     @Override
     public <T, ID> T get(Class<T> clazz, ID id) {
-        return getRepo(clazz).getOne(id);
+        return entityManager.find(clazz, id);
     }
 
     @Override
     public <T> List<T> list(Class<T> clazz, Specification<T> specification) {
-        return getRepo(clazz).findAll(specification);
+        CriteriaBuilder builder = entityManager.getCriteriaBuilder();
+        CriteriaQuery<T> query = builder.createQuery(clazz);
+
+        Root<T> root = query.from(clazz);
+
+        if (specification != null) {
+            Predicate predicate = specification.toPredicate(root, query, builder);
+
+            if (predicate != null) {
+                query.where(predicate);
+            }
+        }
+        query.select(root);
+
+        return entityManager.createQuery(query).getResultList();
     }
 
     @Override
@@ -41,6 +59,11 @@ public class RepositoryTemplateJpa implements RepositoryTemplate, org.springfram
     @Transactional
     public <T> void merge(T pojo) {
         entityManager.merge(pojo);
+
+    }
+
+    public <T> void refresh(T pojo) {
+        entityManager.refresh(pojo);
     }
 
     @Override
@@ -55,7 +78,7 @@ public class RepositoryTemplateJpa implements RepositoryTemplate, org.springfram
     }
 
     /**
-     * 没有分页，谨慎使用
+     * no paging, used carefully
      * @param jpql
      * @param params
      * @param <T>
@@ -73,9 +96,6 @@ public class RepositoryTemplateJpa implements RepositoryTemplate, org.springfram
 
     }
 
-    private <T, ID> SimpleJpaRepository<T, ID> getRepo(Class<T> clazz) {
-        return RepositoryTemplateFactory.getRepository(clazz);
-    }
 
     private <T> EntityInformation<T, ?> getEntityInfomation(Class<T> tClass) {
         return JpaEntityInformationSupport.getEntityInformation(tClass, entityManager);
